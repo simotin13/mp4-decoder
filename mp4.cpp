@@ -48,8 +48,6 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
             break;
         }
         std::cout << "TODO: type:[" << type << "] boxSize:[" << boxSize << "]" << std::endl;
-
-        leftSize -= readSize;
         if (type == "moov")
         {
             std::cout << "moov boxSize:[" << boxSize << "]" << std::endl;
@@ -57,27 +55,29 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
         }
         else if (type == "mvhd")
         {
+            uint64_t seekSize = boxSize - readSize;
             result = readMvhdBox(ifs, readSize, mvhdBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
-
-            ifs.seekg(boxSize-readSize, std::ios_base::cur);
+            seekSize -= readSize;
+            ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
         else if (type == "mdat")
         {
-            mdatSize = boxSize - readSize;
+            uint64_t seekSize = boxSize-readSize;
 
-            ifs.seekg(boxSize, std::ios_base::cur);
+            ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
         else
         {
             // TODO: skip box
-            ifs.seekg(boxSize, std::ios_base::cur);
+            uint64_t seekSize = boxSize-readSize;
+            ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
     }
