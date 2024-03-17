@@ -32,6 +32,13 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
     STSD_BOX_INFO stsdBoxInfo;
     AVC1_BOX_INFO avc1BoxInfo;
     AVCC_BOX_INFO avccBoxInfo;
+    PASP_BOX_INFO paspBoxInfo;
+    STTS_BOX_INFO sttsBoxInfo;
+    STSS_BOX_INFO stssBoxInfo;
+    CTTS_BOX_INFO cttsBoxInfo;
+    STSC_BOX_INFO stscBoxInfo;
+    STSZ_BOX_INFO stszBoxInfo;
+    STCO_BOX_INFO stcoBoxInfo;
     size_t totalSize = st.st_size;
     size_t leftSize  = totalSize;
     uint64_t boxSize  = 0;
@@ -78,26 +85,6 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
             leftSize -= readSize;
         }
         else if (type == "dinf")
-        {
-            // have child box
-            leftSize -= readSize;
-        }
-        else if (type == "stco")
-        {
-            // have child box
-            leftSize -= readSize;
-        }
-        else if (type == "stsc")
-        {
-            // have child box
-            leftSize -= readSize;
-        }
-        else if (type == "stsz")
-        {
-            // have child box
-            leftSize -= readSize;
-        }
-        else if (type == "stts")
         {
             // have child box
             leftSize -= readSize;
@@ -200,6 +187,83 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
         {
             uint64_t seekSize = boxSize - readSize;
             result = readAvccBox(ifs, boxSize, readSize, avccBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "pasp")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readPaspBox(ifs, readSize, paspBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "stts")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readSttsBox(ifs, readSize, sttsBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "stss")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readStssBox(ifs, readSize, stssBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "ctts")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readCttsBox(ifs, readSize, cttsBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "stsc")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readStscBox(ifs, readSize, stscBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "stsz")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readStszBox(ifs, readSize, stszBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            leftSize -= readSize;
+        }
+        else if (type == "stco")
+        {
+            uint64_t seekSize = boxSize - readSize;
+            result = readStcoBox(ifs, readSize, stcoBoxInfo);
             if (!result)
             {
                 result = false;
@@ -860,6 +924,267 @@ bool Mp4::readAvccBox(std::ifstream &ifs, const uint64_t boxSize, uint64_t &read
                 avccBoxInfo.sequenceParameterSetExts.push_back(sps);
             }
         }
+    }
+
+    return true;
+}
+
+bool Mp4::readPaspBox(std::ifstream &ifs, uint64_t &readSize, PASP_BOX_INFO &paspBoxInfo)
+{
+    readSize = 0;
+
+    bool result = byteToInt32Be(ifs, paspBoxInfo.hSpacing);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    result = byteToInt32Be(ifs, paspBoxInfo.vSpacing);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    return true;
+}
+
+bool Mp4::readSttsBox(std::ifstream &ifs, uint64_t &readSize, STTS_BOX_INFO &sttsBoxInfo)
+{
+    // version
+    ifs.read((char*)&(sttsBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(sttsBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, sttsBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    sttsBoxInfo.sampleEntries.clear();
+    for (int i = 0; i < sttsBoxInfo.entryCount; i++)
+    {
+        STTS_SAMPLE_ENTRY_INFO entry;
+        result = byteToUInt32Be(ifs, entry.sampleCount);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToUInt32Be(ifs, entry.sampleDelta);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        sttsBoxInfo.sampleEntries.push_back(entry);
+    }
+
+    return true;
+}
+bool Mp4::readStssBox(std::ifstream &ifs, uint64_t &readSize, STSS_BOX_INFO &stssBoxInfo)
+{
+    // version
+    ifs.read((char*)&(stssBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(stssBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, stssBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    stssBoxInfo.syncSamples.clear();
+    for (int i = 0; i < stssBoxInfo.entryCount; i++)
+    {
+        uint32_t sampleNumber;
+        result = byteToUInt32Be(ifs, sampleNumber);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        stssBoxInfo.syncSamples.push_back(sampleNumber);
+    }
+
+    return true;
+}
+bool Mp4::readCttsBox(std::ifstream &ifs, uint64_t &readSize, CTTS_BOX_INFO &cttsBoxInfo)
+{
+    // version
+    ifs.read((char*)&(cttsBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(cttsBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, cttsBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    cttsBoxInfo.sampleEntries.clear();
+    for (int i = 0; i < cttsBoxInfo.entryCount; i++)
+    {
+        CTTS_SAMPLE_ENTRY_INFO entry;
+        result = byteToUInt32Be(ifs, entry.sampleCount);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToUInt32Be(ifs, entry.sampleOffset);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        cttsBoxInfo.sampleEntries.push_back(entry);
+    }
+
+    return true;
+}
+bool Mp4::readStscBox(std::ifstream &ifs, uint64_t &readSize, STSC_BOX_INFO &stscBoxInfo)
+{
+    // version
+    ifs.read((char*)&(stscBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(stscBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, stscBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    stscBoxInfo.sampleEntries.clear();
+    for (int i = 0; i < stscBoxInfo.entryCount; i++)
+    {
+        STSC_SAMPLE_ENTRY_INFO entry;
+        result = byteToUInt32Be(ifs, entry.firstChunk);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToUInt32Be(ifs, entry.samplesPerChunk);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToUInt32Be(ifs, entry.sampleDescriptionIndex);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        stscBoxInfo.sampleEntries.push_back(entry);
+    }
+
+    return true;
+}
+bool Mp4::readStszBox(std::ifstream &ifs, uint64_t &readSize, STSZ_BOX_INFO &stszBoxInfo)
+{
+    // version
+    ifs.read((char*)&(stszBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(stszBoxInfo.flags), 3);
+    readSize += 3;
+
+    // sample size
+    bool result = byteToUInt32Be(ifs, stszBoxInfo.sampleSize);
+    if (!result)
+    {
+        return false;
+    }
+
+    // sample count
+    result = byteToUInt32Be(ifs, stszBoxInfo.sampleCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    stszBoxInfo.sampleSizes.clear();
+    for (int i = 0; i < stszBoxInfo.sampleCount; i++)
+    {
+        uint32_t sampleSize;
+        result = byteToUInt32Be(ifs, sampleSize);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        stszBoxInfo.sampleSizes.push_back(sampleSize);
+    }
+
+    return true;
+}
+bool Mp4::readStcoBox(std::ifstream &ifs, uint64_t &readSize, STCO_BOX_INFO &stcoBoxInfo)
+{
+    // version
+    ifs.read((char*)&(stcoBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(stcoBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, stcoBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    stcoBoxInfo.sampleSizes.clear();
+    for (int i = 0; i < stcoBoxInfo.entryCount; i++)
+    {
+        uint32_t sampleSize;
+        result = byteToUInt32Be(ifs, sampleSize);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        stcoBoxInfo.sampleSizes.push_back(sampleSize);
     }
 
     return true;

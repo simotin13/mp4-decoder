@@ -65,6 +65,74 @@ struct STSD_BOX_INFO
     uint32_t entryCount;                    // entry count
 };
 
+struct STTS_SAMPLE_ENTRY_INFO
+{
+    uint32_t sampleCount;                   // sample count
+    uint32_t sampleDelta;                   // sample delta
+};
+
+struct STTS_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<STTS_SAMPLE_ENTRY_INFO> sampleEntries;  // sample entries
+};
+
+struct STSS_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<uint32_t> syncSamples;      // sync samples
+};
+
+struct CTTS_SAMPLE_ENTRY_INFO
+{
+    uint32_t sampleCount;                   // sample count
+    uint32_t sampleOffset;                  // sample offset
+};
+
+struct CTTS_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<CTTS_SAMPLE_ENTRY_INFO> sampleEntries;  // sample entries
+};
+
+struct STSC_SAMPLE_ENTRY_INFO
+{
+    uint32_t firstChunk;                    // first chunk
+    uint32_t samplesPerChunk;               // samples per chunk
+    uint32_t sampleDescriptionIndex;        // sample description index
+};
+
+struct STSC_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<STSC_SAMPLE_ENTRY_INFO> sampleEntries;  // sample entries
+};
+
+struct STSZ_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t sampleSize;                    // sample size
+    uint32_t sampleCount;                   // entry count
+    std::vector<uint32_t> sampleSizes;      // sample sizes
+};
+
+struct STCO_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<uint32_t> sampleSizes;      // sample sizes
+};
+
 struct AVC1_BOX_INFO
 {
     uint8_t reserved[6];                    // 6 reserved bytes (set to 0)
@@ -115,6 +183,12 @@ struct AVCC_BOX_INFO
     std::vector<SEQUENCE_PARAMETER_SET> sequenceParameterSetExts;  // sequence parameter set ext
 };
 
+struct PASP_BOX_INFO
+{
+    int32_t hSpacing;                       // horizontal spacing
+    int32_t vSpacing;                       // vertical spacing
+};
+
 class Mp4
 {
 public:
@@ -132,6 +206,12 @@ private:
     static bool readStsdBox(std::ifstream &ifs, uint64_t &readSize, STSD_BOX_INFO &stsdBoxInfo);
     static bool readAvc1Box(std::ifstream &ifs, uint64_t &readSize, AVC1_BOX_INFO &avc1BoxInfo);
     static bool readAvccBox(std::ifstream &ifs, const uint64_t boxSize, uint64_t &readSize, AVCC_BOX_INFO &avccBoxInfo);
-    
+    static bool readPaspBox(std::ifstream &ifs, uint64_t &readSize, PASP_BOX_INFO &paspBoxInfo);
+    static bool readSttsBox(std::ifstream &ifs, uint64_t &readSize, STTS_BOX_INFO &sttsBoxInfo);
+    static bool readStssBox(std::ifstream &ifs, uint64_t &readSize, STSS_BOX_INFO &stssBoxInfo);
+    static bool readCttsBox(std::ifstream &ifs, uint64_t &readSize, CTTS_BOX_INFO &cttsBoxInfo);
+    static bool readStscBox(std::ifstream &ifs, uint64_t &readSize, STSC_BOX_INFO &stscBoxInfo);
+    static bool readStszBox(std::ifstream &ifs, uint64_t &readSize, STSZ_BOX_INFO &stszBoxInfo);
+    static bool readStcoBox(std::ifstream &ifs, uint64_t &readSize, STCO_BOX_INFO &stcoBoxInfo);
 };
 #endif // _MP4_H_
