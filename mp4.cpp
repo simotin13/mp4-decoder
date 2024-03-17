@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "mp4.h"
+#include <assert.h>
 
 #define SIZE_BOX_HEADER  (8)
 #define SIZE_MB_BYTE     (1048576)
@@ -30,6 +31,7 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
     TKHD_BOX_INFO tkhdBoxInfo;
     MVHD_BOX_INFO mvhdBoxInfo;
     STSD_BOX_INFO stsdBoxInfo;
+    ELST_BOX_INFO elstBoxInfo;
     AVC1_BOX_INFO avc1BoxInfo;
     AVCC_BOX_INFO avccBoxInfo;
     PASP_BOX_INFO paspBoxInfo;
@@ -52,13 +54,15 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
     bool result = false;
     while(0 < leftSize)
     {
+        std::streampos pos = ifs.tellg();
+        uint64_t leftPos = totalSize - pos;
         result = readBoxHeader(ifs, readSize, boxSize, type, errMsg);
         if (!result)
         {
             result = false;
             break;
         }
-        std::cout << "TODO: type:[" << type << "] boxSize:[" << boxSize << "]" << std::endl;
+        std::cout << "TODO: type:[" << type << "] boxSize:[" << boxSize << "]" << "leftSize:[" << leftSize << "], leftPos:[" << leftPos << "]" << std::endl;
         if (type == "moov")
         {
             // have child box
@@ -89,35 +93,50 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
             // have child box
             leftSize -= readSize;
         }
+        else if (type == "edts")
+        {
+            // have child box
+            leftSize -= readSize;
+        }
         else if (type == "tkhd")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readTkhdBox(ifs, readSize, tkhdBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
-            seekSize -= readSize;
-            ifs.seekg(seekSize, std::ios_base::cur);
-            leftSize -= boxSize;
+            assert(readSize == boxSize-8);
+            leftSize -= readSize;
+        }
+        else if (type == "elst")
+        {
+            leftSize -= readSize;
+            result = readElstBox(ifs, readSize, elstBoxInfo);
+            if (!result)
+            {
+                result = false;
+                break;
+            }
+            assert(readSize == boxSize-8);
+            leftSize -= readSize;
         }
         else if (type == "mvhd")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readMvhdBox(ifs, readSize, mvhdBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
-            seekSize -= readSize;
-            ifs.seekg(seekSize, std::ios_base::cur);
-            leftSize -= boxSize;
+            assert(readSize == boxSize-8);
+            leftSize -= readSize;
         }
         else if (type == "stsd")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readStsdBox(ifs, readSize, stsdBoxInfo);
             if (!result)
             {
@@ -129,52 +148,24 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
         else if (type == "mdat")
         {
             uint64_t seekSize = boxSize-readSize;
-
-            ifs.seekg(seekSize, std::ios_base::cur);
-            leftSize -= boxSize;
-        }
-        else if (type == "tkhd")
-        {
-            uint64_t seekSize = boxSize - readSize;
-            result = readTkhdBox(ifs, readSize, tkhdBoxInfo);
-            if (!result)
-            {
-                result = false;
-                break;
-            }
-            seekSize -= readSize;
             ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
         else if (type == "mvhd")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readMvhdBox(ifs, readSize, mvhdBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
-            seekSize -= readSize;
-            ifs.seekg(seekSize, std::ios_base::cur);
-            leftSize -= boxSize;
-        }
-        else if (type == "stsd")
-        {
-            uint64_t seekSize = boxSize - readSize;
-            result = readStsdBox(ifs, readSize, stsdBoxInfo);
-            if (!result)
-            {
-                result = false;
-                break;
-            }
-            seekSize -= readSize;
-            ifs.seekg(seekSize, std::ios_base::cur);
+            assert(readSize == boxSize-8);
             leftSize -= boxSize;
         }
         else if (type == "avc1")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readAvc1Box(ifs, readSize, avc1BoxInfo);
             if (!result)
             {
@@ -185,103 +176,111 @@ bool Mp4::ReadMp4Info(std::string filePath, MP4_INFO &mp4Info, std::string &errM
         }
         else if (type == "avcC")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readAvccBox(ifs, boxSize, readSize, avccBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "pasp")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readPaspBox(ifs, readSize, paspBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "stts")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readSttsBox(ifs, readSize, sttsBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "stss")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readStssBox(ifs, readSize, stssBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "ctts")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readCttsBox(ifs, readSize, cttsBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "stsc")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readStscBox(ifs, readSize, stscBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "stsz")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readStszBox(ifs, readSize, stszBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "stco")
         {
-            uint64_t seekSize = boxSize - readSize;
+            leftSize -= readSize;
             result = readStcoBox(ifs, readSize, stcoBoxInfo);
             if (!result)
             {
                 result = false;
                 break;
             }
+            assert(readSize == boxSize-8);
             leftSize -= readSize;
         }
         else if (type == "mdat")
         {
             uint64_t seekSize = boxSize-readSize;
-
             ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
         else
         {
             // TODO: skip box
-            uint64_t seekSize = boxSize-readSize;
+            std::cout << "TODO skip box type:[" << type << "] boxSize:[" << boxSize << "]" << std::endl;
+            uint64_t seekSize = boxSize - readSize;
             ifs.seekg(seekSize, std::ios_base::cur);
             leftSize -= boxSize;
         }
@@ -556,6 +555,64 @@ bool Mp4::readTkhdBox(std::ifstream &ifs, uint64_t &readSize, TKHD_BOX_INFO &tkh
     return true;
 }
 
+bool Mp4::readElstBox(std::ifstream &ifs, uint64_t &readSize, ELST_BOX_INFO &elstBoxInfo)
+{
+    std::vector<unsigned char> buf;
+    readSize = 0;
+
+    // version
+    ifs.read((char*)&(elstBoxInfo.version), 1);
+    readSize++;
+
+    // Flags
+    ifs.read((char *)(elstBoxInfo.flags), 3);
+    readSize += 3;
+
+    // entry count
+    bool result = byteToUInt32Be(ifs, elstBoxInfo.entryCount);
+    if (!result)
+    {
+        return false;
+    }
+    readSize += 4;
+
+    elstBoxInfo.entries.clear();
+    for (int i = 0; i < elstBoxInfo.entryCount; i++)
+    {
+        ELST_ENTRY_INFO entry;
+        result = byteToUInt32Be(ifs, entry.segmentDuration);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToUInt32Be(ifs, entry.mediaTime);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 4;
+
+        result = byteToInt16Be(ifs, entry.mediaRateInteger);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 2;
+
+        result = byteToInt16Be(ifs, entry.mediaRateFraction);
+        if (!result)
+        {
+            return false;
+        }
+        readSize += 2;
+
+        elstBoxInfo.entries.push_back(entry);
+    }
+
+    return true;
+}
 bool Mp4::readStsdBox(std::ifstream &ifs, uint64_t &readSize, STSD_BOX_INFO &stsdBoxInfo)
 {
     std::vector<unsigned char> buf;
@@ -952,6 +1009,8 @@ bool Mp4::readPaspBox(std::ifstream &ifs, uint64_t &readSize, PASP_BOX_INFO &pas
 
 bool Mp4::readSttsBox(std::ifstream &ifs, uint64_t &readSize, STTS_BOX_INFO &sttsBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(sttsBoxInfo.version), 1);
     readSize++;
@@ -993,6 +1052,8 @@ bool Mp4::readSttsBox(std::ifstream &ifs, uint64_t &readSize, STTS_BOX_INFO &stt
 }
 bool Mp4::readStssBox(std::ifstream &ifs, uint64_t &readSize, STSS_BOX_INFO &stssBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(stssBoxInfo.version), 1);
     readSize++;
@@ -1027,6 +1088,8 @@ bool Mp4::readStssBox(std::ifstream &ifs, uint64_t &readSize, STSS_BOX_INFO &sts
 }
 bool Mp4::readCttsBox(std::ifstream &ifs, uint64_t &readSize, CTTS_BOX_INFO &cttsBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(cttsBoxInfo.version), 1);
     readSize++;
@@ -1068,6 +1131,8 @@ bool Mp4::readCttsBox(std::ifstream &ifs, uint64_t &readSize, CTTS_BOX_INFO &ctt
 }
 bool Mp4::readStscBox(std::ifstream &ifs, uint64_t &readSize, STSC_BOX_INFO &stscBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(stscBoxInfo.version), 1);
     readSize++;
@@ -1116,6 +1181,8 @@ bool Mp4::readStscBox(std::ifstream &ifs, uint64_t &readSize, STSC_BOX_INFO &sts
 }
 bool Mp4::readStszBox(std::ifstream &ifs, uint64_t &readSize, STSZ_BOX_INFO &stszBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(stszBoxInfo.version), 1);
     readSize++;
@@ -1130,6 +1197,7 @@ bool Mp4::readStszBox(std::ifstream &ifs, uint64_t &readSize, STSZ_BOX_INFO &sts
     {
         return false;
     }
+    readSize += 4;
 
     // sample count
     result = byteToUInt32Be(ifs, stszBoxInfo.sampleCount);
@@ -1157,6 +1225,8 @@ bool Mp4::readStszBox(std::ifstream &ifs, uint64_t &readSize, STSZ_BOX_INFO &sts
 }
 bool Mp4::readStcoBox(std::ifstream &ifs, uint64_t &readSize, STCO_BOX_INFO &stcoBoxInfo)
 {
+    readSize = 0;
+
     // version
     ifs.read((char*)&(stcoBoxInfo.version), 1);
     readSize++;

@@ -58,6 +58,22 @@ struct MVHD_BOX_INFO
     uint32_t nextTrackId;                   // next track id
 };
 
+struct ELST_ENTRY_INFO
+{
+    uint32_t segmentDuration;               // segment duration
+    uint32_t mediaTime;                     // media time
+    int16_t mediaRateInteger;               // media rate integer
+    int16_t mediaRateFraction;              // media rate fraction
+};
+
+struct ELST_BOX_INFO
+{
+    uint8_t version;                        // varsion
+    uint8_t flags[3];                       // flags
+    uint32_t entryCount;                    // entry count
+    std::vector<ELST_ENTRY_INFO> entries;   // entries
+};
+
 struct STSD_BOX_INFO
 {
     uint8_t version;                        // varsion
@@ -203,6 +219,7 @@ private:
     static bool readBoxHeader(std::ifstream &ifs, uint64_t &readSize, uint64_t &boxSize, std::string &type, std::string &errMsg);
     static bool readMvhdBox(std::ifstream &ifs, uint64_t &readSize, MVHD_BOX_INFO &mvhdBoxInfo);
     static bool readTkhdBox(std::ifstream &ifs, uint64_t &readSize, TKHD_BOX_INFO &tkhdBoxInfo);
+    static bool readElstBox(std::ifstream &ifs, uint64_t &readSize, ELST_BOX_INFO &elstBoxInfo);
     static bool readStsdBox(std::ifstream &ifs, uint64_t &readSize, STSD_BOX_INFO &stsdBoxInfo);
     static bool readAvc1Box(std::ifstream &ifs, uint64_t &readSize, AVC1_BOX_INFO &avc1BoxInfo);
     static bool readAvccBox(std::ifstream &ifs, const uint64_t boxSize, uint64_t &readSize, AVCC_BOX_INFO &avccBoxInfo);
